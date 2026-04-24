@@ -4,7 +4,7 @@
 
 const PRODUCT_PRICE      = 4800;
 const PRODUCT_NAME       = 'آلة الحلاقة kemei للنساء 2EN1';
-const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycbw3ASBwKWS05-JK9hljuthbFlfu-h5eTXs5aRIL2s7nKfl4p6k_Mf89vFCgJlerYYkBdw/exec';
+const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycby9Lm3Wqy9aaW5aNkSDCAm4f9y5S31jhVWpemAgFv1Pk1GD83yYEv2U3EuY6BzeCQAwTQ/exec';
 const WHATSAPP_NUM       = '213553096569';
 const RESTRICTED_WILAYAS = ['52', '56', '57'];
 
@@ -135,17 +135,24 @@ function finalSubmit() {
   btn.innerText     = '⏳ جاري إرسال الطلب...';
   btn.style.opacity = '0.6';
 
-  const formData = {
-    product:        PRODUCT_NAME,
-    name,
-    phone,
-    wilaya:         wilayaSel.options[wilayaSel.selectedIndex].text,
-    commune,
-    delivery_type:  selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب',
-    delivery_price: delivery > 0 ? delivery.toLocaleString() + ' دج' : 'مجانا',
-    total:          total.toLocaleString() + ' دج'
-  };
+  // --- كود استخراج وفصل الولاية الجديد ---
+const fullWilayaText = wilayaSel.options[wilayaSel.selectedIndex].text;
+const wilayaParts = fullWilayaText.split('-');
+const wNumber = wilayaParts[0] ? wilayaParts[0].trim() : "";
+const wName = wilayaParts[1] ? wilayaParts[1].trim() : fullWilayaText;
+// ---------------------------------------
 
+const formData = {
+    product: PRODUCT_NAME,
+    name: name.value || name, // تأكد من الحصول على القيمة إذا كان عنصر input
+    phone: phone.value || phone,
+    wilaya_num: wNumber,       // يرسل الرقم للعمود D
+    wilaya_name: wName,        // يرسل الاسم للعمود E
+    commune: commune.value || commune,
+    delivery_type: selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب',
+    delivery_price: delivery > 0 ? delivery.toLocaleString() + ' دج' : 'مجاناً',
+    total: total.toLocaleString() + ' دج'
+};
   fetch(SCRIPT_URL, {
     method:  'POST',
     mode:    'no-cors',
