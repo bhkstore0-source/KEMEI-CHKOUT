@@ -4,7 +4,7 @@
 
 const PRODUCT_PRICE      = 4800;
 const PRODUCT_NAME       = 'آلة الحلاقة kemei للنساء 2EN1';
-const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycby_UTUdy5TboREqQHsXlkqb02mxZGpbeRkQ5wHG2ymBdcSSAdDNThy7X3mqND7KpKqF7g/exec';
+const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycbyBTCQ9_LCzOVyfI8ASl88IoO0UTHLrXuZ8klO0juIA7bszhTGOVYOI47Icg7e3nmbY9w/exec';
 const WHATSAPP_NUM       = '213553096569';
 const RESTRICTED_WILAYAS = ['52', '56', '57'];
 
