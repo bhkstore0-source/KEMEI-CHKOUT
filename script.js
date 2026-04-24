@@ -4,7 +4,7 @@
 
 const PRODUCT_PRICE      = 4800;
 const PRODUCT_NAME       = 'آلة الحلاقة kemei للنساء 2EN1';
-const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycby9Lm3Wqy9aaW5aNkSDCAm4f9y5S31jhVWpemAgFv1Pk1GD83yYEv2U3EuY6BzeCQAwTQ/exec';
+const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycbxkjeF9t1Hlo_LV4b9Lw-OCZKC4vigmQZJBjwTJ3-Y4Cvbg1QF539GmXpQLj-j6BHblbQ/exec';
 const WHATSAPP_NUM       = '213553096569';
 const RESTRICTED_WILAYAS = ['52', '56', '57'];
 
@@ -135,20 +135,19 @@ function finalSubmit() {
   btn.innerText     = '⏳ جاري إرسال الطلب...';
   btn.style.opacity = '0.6';
 
-  // --- كود استخراج وفصل الولاية الجديد ---
-const fullWilayaText = wilayaSel.options[wilayaSel.selectedIndex].text;
-const wilayaParts = fullWilayaText.split('-');
-const wNumber = wilayaParts[0] ? wilayaParts[0].trim() : "";
-const wName = wilayaParts[1] ? wilayaParts[1].trim() : fullWilayaText;
-// ---------------------------------------
+  // فصل الولاية إلى رقم واسم
+const fullWilaya = wilayaSel.options[wilayaSel.selectedIndex].text;
+const wParts = fullWilaya.split('-');
+const wNum = wParts[0] ? wParts[0].trim() : "";
+const wName = wParts[1] ? wParts[1].trim() : fullWilaya;
 
 const formData = {
     product: PRODUCT_NAME,
-    name: name.value || name, // تأكد من الحصول على القيمة إذا كان عنصر input
-    phone: phone.value || phone,
-    wilaya_num: wNumber,       // يرسل الرقم للعمود D
-    wilaya_name: wName,        // يرسل الاسم للعمود E
-    commune: commune.value || commune,
+    name: document.getElementById('name').value,   // جلب القيمة مباشرة بالـ id
+    phone: document.getElementById('phone').value, // جلب القيمة مباشرة بالـ id
+    wilaya_num: wNum,                              // يروح للخانة D
+    wilaya_name: wName,                            // يروح للخانة E
+    commune: document.getElementById('commune').value,
     delivery_type: selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب',
     delivery_price: delivery > 0 ? delivery.toLocaleString() + ' دج' : 'مجاناً',
     total: total.toLocaleString() + ' دج'
