@@ -8,7 +8,6 @@ const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycbxkjeF9t1Hlo
 const WHATSAPP_NUM       = '213553096569';
 const RESTRICTED_WILAYAS = ['52', '56', '57'];
 
-// ── أسعار التوصيل للمنزل (دج)
 const HOME_PRICES = {
   "1":1100,"2":700,"3":900,"4":800,"5":800,
   "6":700,"7":900,"8":1100,"9":500,"10":650,
@@ -24,7 +23,6 @@ const HOME_PRICES = {
   "56":1400,"57":900,"58":1000
 };
 
-// ── أسعار التوصيل للمكتب (دج)
 const OFFICE_PRICES = {
   "1":600,"2":400,"3":500,"4":400,"5":400,
   "6":400,"7":500,"8":600,"9":250,"10":400,
@@ -43,12 +41,10 @@ const OFFICE_PRICES = {
 let selectedDelivery = 'home';
 let communeData      = {};
 
-// تحميل البلديات
 fetch('communes.json')
   .then(r => r.json())
   .then(data => { communeData = data; });
 
-// ── اختيار نوع التوصيل
 function selectDelivery(type) {
   selectedDelivery = type;
   document.getElementById('homeBox').classList.toggle('active',   type === 'home');
@@ -56,7 +52,6 @@ function selectDelivery(type) {
   updateTotal();
 }
 
-// ── تحديث البلديات
 function updateCommunes() {
   const w         = document.getElementById('wilayaSelect').value;
   const cSelect   = document.getElementById('communeSelect');
@@ -69,7 +64,6 @@ function updateCommunes() {
     cSelect.appendChild(o);
   });
 
-  // إخفاء المكتب للولايات المقيدة
   if (RESTRICTED_WILAYAS.includes(w)) {
     officeBox.style.display = 'none';
     selectDelivery('home');
@@ -79,17 +73,16 @@ function updateCommunes() {
   updateTotal();
 }
 
-// ── تحديث ملخص السعر
 function updateTotal() {
   const w        = document.getElementById('wilayaSelect').value;
   const prices   = selectedDelivery === 'home' ? HOME_PRICES : OFFICE_PRICES;
   const delivery = w !== '' && prices[w] !== undefined ? prices[w] : null;
   const total    = delivery !== null ? PRODUCT_PRICE + delivery : null;
 
-  const pp    = document.getElementById('productPrice');
-  const dp    = document.getElementById('deliveryPrice');
-  const tp    = document.getElementById('totalPrice');
-  const hint  = document.getElementById('deliveryHint');
+  const pp   = document.getElementById('productPrice');
+  const dp   = document.getElementById('deliveryPrice');
+  const tp   = document.getElementById('totalPrice');
+  const hint = document.getElementById('deliveryHint');
 
   if (pp) pp.textContent = PRODUCT_PRICE.toLocaleString();
 
@@ -105,14 +98,16 @@ function updateTotal() {
     } else {
       dp.textContent = delivery.toLocaleString() + ' دج';
       dp.style.color = '#e74c3c';
-      if (hint) { hint.textContent = '🏠 منزل: ' + (HOME_PRICES[w]||0).toLocaleString() + ' دج   |   📦 مكتب: ' + (OFFICE_PRICES[w]||0).toLocaleString() + ' دج'; hint.classList.add('visible'); }
+      if (hint) {
+        hint.textContent = '🏠 منزل: ' + (HOME_PRICES[w]||0).toLocaleString() + ' دج   |   📦 مكتب: ' + (OFFICE_PRICES[w]||0).toLocaleString() + ' دج';
+        hint.classList.add('visible');
+      }
     }
   }
 
   if (tp) tp.textContent = total !== null ? total.toLocaleString() + ' دج' : '—';
 }
 
-// ── إرسال الطلب
 function finalSubmit() {
   const name      = document.getElementById('cust_name').value.trim();
   const phone     = document.getElementById('phoneInput').value.trim();
@@ -130,28 +125,30 @@ function finalSubmit() {
   const delivery = prices[w] !== undefined ? prices[w] : 0;
   const total    = PRODUCT_PRICE + delivery;
 
+  // ── فصل رقم الولاية عن اسمها
+  // مثال: "05 - باتنة" → wilaya_num="5"  wilaya_name="باتنة"
+  const fullWilaya = wilayaSel.options[wilayaSel.selectedIndex].text; // "05 - باتنة"
+  const wParts     = fullWilaya.split('-');
+  const wilayaNum  = wParts[0] ? String(parseInt(wParts[0].trim(), 10)) : w; // "5"
+  const wilayaName = wParts[1] ? wParts[1].trim() : fullWilaya;              // "باتنة"
+
   const btn = document.getElementById('submitBtn');
   btn.disabled      = true;
   btn.innerText     = '⏳ جاري إرسال الطلب...';
   btn.style.opacity = '0.6';
 
-  // فصل الولاية إلى رقم واسم
-const fullWilaya = wilayaSel.options[wilayaSel.selectedIndex].text;
-const wParts = fullWilaya.split('-');
-const wNum = wParts[0] ? wParts[0].trim() : "";
-const wName = wParts[1] ? wParts[1].trim() : fullWilaya;
-
-const formData = {
-    product: PRODUCT_NAME,
-    name: document.getElementById('name').value,   // جلب القيمة مباشرة بالـ id
-    phone: document.getElementById('phone').value, // جلب القيمة مباشرة بالـ id
-    wilaya_num: wNum,                              // يروح للخانة D
-    wilaya_name: wName,                            // يروح للخانة E
-    commune: document.getElementById('commune').value,
+  const formData = {
+    product:       PRODUCT_NAME,
+    name:          name,
+    phone:         phone,
+    wilaya_num:    wilayaNum,    // D → رقم الولاية فقط (5)
+    wilaya_name:   wilayaName,   // E → اسم الولاية فقط (باتنة)
+    commune:       commune,      // F → البلدية
     delivery_type: selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب',
     delivery_price: delivery > 0 ? delivery.toLocaleString() + ' دج' : 'مجاناً',
-    total: total.toLocaleString() + ' دج'
-};
+    total:         total.toLocaleString() + ' دج'
+  };
+
   fetch(SCRIPT_URL, {
     method:  'POST',
     mode:    'no-cors',
@@ -160,6 +157,15 @@ const formData = {
     body:    JSON.stringify(formData)
   })
   .then(() => {
+    // ── Facebook Pixel — تتبع حدث Purchase عند إرسال الطلب
+    if (typeof fbq !== 'undefined') {
+      fbq('track', 'Purchase', {
+        value:    total,
+        currency: 'DZD',
+        content_name: PRODUCT_NAME
+      });
+    }
+
     const modal = document.getElementById('successModal');
     if (modal) { modal.classList.add('show'); modal.style.display = 'flex'; }
     btn.disabled      = false;
@@ -174,7 +180,6 @@ const formData = {
   });
 }
 
-// ── إغلاق مودال النجاح + واتساب
 function closeSuccessModal() {
   const modal = document.getElementById('successModal');
   if (modal) { modal.classList.remove('show'); modal.style.display = 'none'; }
@@ -183,7 +188,6 @@ function closeSuccessModal() {
   setTimeout(() => location.reload(), 1000);
 }
 
-// ── تهيئة عند التحميل
 window.addEventListener('DOMContentLoaded', () => {
   updateTotal();
 
