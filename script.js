@@ -1,5 +1,7 @@
 // ══════════════════════════════════════════
-//  BHK STORE — script.js
+//  BHK STORE — script.js (CORRIGÉ v2)
+//  ✅ FIX PRINCIPAL : FormData au lieu de JSON
+//     → compatible avec mode: 'no-cors' de Apps Script
 // ══════════════════════════════════════════
 
 const PRODUCT_PRICE      = 4800;
@@ -125,43 +127,40 @@ function finalSubmit() {
   const delivery = prices[w] !== undefined ? prices[w] : 0;
   const total    = PRODUCT_PRICE + delivery;
 
-  // ── فصل رقم الولاية عن اسمها
-  // مثال: "05 - باتنة" → wilaya_num="5"  wilaya_name="باتنة"
-  const fullWilaya = wilayaSel.options[wilayaSel.selectedIndex].text; // "05 - باتنة"
+  const fullWilaya = wilayaSel.options[wilayaSel.selectedIndex].text;
   const wParts     = fullWilaya.split('-');
-  const wilayaNum  = wParts[0] ? String(parseInt(wParts[0].trim(), 10)) : w; // "5"
-  const wilayaName = wParts[1] ? wParts[1].trim() : fullWilaya;              // "باتنة"
+  const wilayaNum  = wParts[0] ? String(parseInt(wParts[0].trim(), 10)) : w;
+  const wilayaName = wParts[1] ? wParts[1].trim() : fullWilaya;
 
   const btn = document.getElementById('submitBtn');
   btn.disabled      = true;
   btn.innerText     = '⏳ جاري إرسال الطلب...';
   btn.style.opacity = '0.6';
 
-  const formData = {
-    product:       PRODUCT_NAME,
-    name:          name,
-    phone:         phone,
-    wilaya_num:    wilayaNum,    // D → رقم الولاية فقط (5)
-    wilaya_name:   wilayaName,   // E → اسم الولاية فقط (باتنة)
-    commune:       commune,      // F → البلدية
-    delivery_type: selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب',
-    delivery_price: delivery > 0 ? delivery.toLocaleString() + ' دج' : 'مجاناً',
-    total:         total.toLocaleString() + ' دج'
-  };
+  // ✅ FIX PRINCIPAL : FormData بدل JSON
+  // مع mode: 'no-cors'، المتصفح يرفض Content-Type: application/json
+  // FormData (multipart) هي الطريقة الوحيدة اللي تخدم
+  const formData = new FormData();
+  formData.append('product',        PRODUCT_NAME);
+  formData.append('name',           name);
+  formData.append('phone',          phone);
+  formData.append('wilaya_num',     wilayaNum);
+  formData.append('wilaya_name',    wilayaName);
+  formData.append('commune',        commune);
+  formData.append('delivery_type',  selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب');
+  formData.append('delivery_price', String(delivery));  // ✅ رقم صافي بلا "دج"
+  formData.append('total',          String(total));      // ✅ رقم صافي بلا "دج"
 
   fetch(SCRIPT_URL, {
-    method:  'POST',
-    mode:    'no-cors',
-    cache:   'no-cache',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(formData)
+    method: 'POST',
+    mode:   'no-cors',  // مبدّلش هذا — Apps Script يحتاجه
+    body:   formData    // ✅ FormData بدل JSON.stringify
   })
   .then(() => {
-    // ── Facebook Pixel — تتبع حدث Purchase عند إرسال الطلب
     if (typeof fbq !== 'undefined') {
       fbq('track', 'Purchase', {
-        value:    total,
-        currency: 'DZD',
+        value:        total,
+        currency:     'DZD',
         content_name: PRODUCT_NAME
       });
     }
