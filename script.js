@@ -1,12 +1,10 @@
 // ══════════════════════════════════════════
-//  BHK STORE — script.js (CORRIGÉ v2)
-//  ✅ FIX PRINCIPAL : FormData au lieu de JSON
-//     → compatible avec mode: 'no-cors' de Apps Script
+//  BHK STORE — script.js
 // ══════════════════════════════════════════
 
 const PRODUCT_PRICE      = 4800;
 const PRODUCT_NAME       = 'آلة الحلاقة kemei للنساء 2EN1';
-const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycbyoQBV3aEVZraNp8WgvMhHEdmVXGKIvH8Gor5i9bDoFUladSqrKNWZIudkdY54wGUq6bA/exec';
+const SCRIPT_URL         = 'https://script.google.com/macros/s/AKfycby9k67Izvu5mXKwS10hhuiiKZy_yIY-okcPWM-URLC7m5yWGjicKr7XimKbd_X0evKtxQ/exec';
 const WHATSAPP_NUM       = '213553096569';
 const RESTRICTED_WILAYAS = ['52', '56', '57'];
 
@@ -43,44 +41,102 @@ const OFFICE_PRICES = {
 let selectedDelivery = 'home';
 let communeData      = {};
 
-fetch('communes.json')
-  .then(r => r.json())
-  .then(data => { communeData = data; });
-
-function selectDelivery(type) {
-  selectedDelivery = type;
-  document.getElementById('homeBox').classList.toggle('active',   type === 'home');
-  document.getElementById('officeBox').classList.toggle('active', type === 'office');
-  updateTotal();
+// ══════════════════════════════════════════
+function loadCommunes(type) {
+  const file = type === 'home' ? 'communes.json' : 'communes stopdesk.json';
+  return fetch(file)
+    .then(r => r.json())
+    .then(data => { communeData = data; });
 }
 
-function updateCommunes() {
-  const w         = document.getElementById('wilayaSelect').value;
-  const cSelect   = document.getElementById('communeSelect');
-  const officeBox = document.getElementById('officeBox');
+// ══════════════════════════════════════════
+// تغيير نوع التوصيل — ما يصفرش الولاية ولا البلدية
+function selectDelivery(type) {
+  selectedDelivery = type;
 
-  cSelect.innerHTML = '<option value="">اختر البلدية</option>';
+  document.getElementById('homeBox').classList.toggle('active',   type === 'home');
+  document.getElementById('officeBox').classList.toggle('active', type === 'office');
+
+  const w = document.getElementById('wilayaSelect').value;
+
+  if (w) {
+    // عبّي البلديات من الملف الجديد بدون ما تمسح الولاية
+    loadCommunes(type).then(() => {
+      const currentCommune = document.getElementById('communeSelect').value;
+      fillCommunes(w);
+      // حاول تحافظ على البلدية المختارة إذا كانت متوفرة في النوع الجديد
+      const cSelect = document.getElementById('communeSelect');
+      if (currentCommune && [...cSelect.options].some(o => o.value === currentCommune)) {
+        cSelect.value = currentCommune;
+      }
+      updateTotal();
+    });
+  } else {
+    updateTotal();
+  }
+}
+
+// ══════════════════════════════════════════
+function fillCommunes(w) {
+  const cSelect = document.getElementById('communeSelect');
+  cSelect.innerHTML = '<option value="">اختر</option>';
   (communeData[w] || []).forEach(name => {
     const o = document.createElement('option');
     o.value = name; o.textContent = name;
     cSelect.appendChild(o);
   });
-
-  if (RESTRICTED_WILAYAS.includes(w)) {
-    officeBox.style.display = 'none';
-    selectDelivery('home');
-  } else {
-    officeBox.style.display = 'flex';
-  }
-  updateTotal();
 }
 
+// ══════════════════════════════════════════
+// تغيير الولاية — يعبّي البلديات ويحدث الأسعار
+function updateCommunes() {
+  const w         = document.getElementById('wilayaSelect').value;
+  const officeBox = document.getElementById('officeBox');
+
+  const isRestricted = RESTRICTED_WILAYAS.includes(w);
+  if (isRestricted) {
+    officeBox.style.display = 'none';
+    if (selectedDelivery === 'office') {
+      selectedDelivery = 'home';
+      document.getElementById('homeBox').classList.add('active');
+      document.getElementById('officeBox').classList.remove('active');
+    }
+  } else {
+    officeBox.style.display = '';
+  }
+
+  loadCommunes(selectedDelivery).then(() => {
+    fillCommunes(w);
+    updateTotal();
+  });
+}
+
+// ══════════════════════════════════════════
 function updateTotal() {
-  const w        = document.getElementById('wilayaSelect').value;
+  const w           = document.getElementById('wilayaSelect').value;
+  const homePrice   = (w !== '' && HOME_PRICES[w]   !== undefined) ? HOME_PRICES[w]   : null;
+  const officePrice = (w !== '' && OFFICE_PRICES[w] !== undefined) ? OFFICE_PRICES[w] : null;
+
   const prices   = selectedDelivery === 'home' ? HOME_PRICES : OFFICE_PRICES;
-  const delivery = w !== '' && prices[w] !== undefined ? prices[w] : null;
+  const delivery = (w !== '' && prices[w] !== undefined) ? prices[w] : null;
   const total    = delivery !== null ? PRODUCT_PRICE + delivery : null;
 
+  // labels الكارتات
+  const homeLbl   = document.getElementById('homePriceLabel');
+  const officeLbl = document.getElementById('officePriceLabel');
+
+  if (homeLbl) {
+    if (homePrice === null)   homeLbl.textContent = 'اختر الولاية';
+    else if (homePrice === 0) homeLbl.textContent = 'مجانا 🎁';
+    else                      homeLbl.textContent = homePrice.toLocaleString() + ' دج';
+  }
+  if (officeLbl) {
+    if (officePrice === null)   officeLbl.textContent = 'اختر الولاية';
+    else if (officePrice === 0) officeLbl.textContent = 'مجانا 🎁';
+    else                        officeLbl.textContent = officePrice.toLocaleString() + ' دج';
+  }
+
+  // ملخص الطلبية
   const pp   = document.getElementById('productPrice');
   const dp   = document.getElementById('deliveryPrice');
   const tp   = document.getElementById('totalPrice');
@@ -100,16 +156,14 @@ function updateTotal() {
     } else {
       dp.textContent = delivery.toLocaleString() + ' دج';
       dp.style.color = '#e74c3c';
-      if (hint) {
-        hint.textContent = '🏠 منزل: ' + (HOME_PRICES[w]||0).toLocaleString() + ' دج   |   📦 مكتب: ' + (OFFICE_PRICES[w]||0).toLocaleString() + ' دج';
-        hint.classList.add('visible');
-      }
+      if (hint) hint.classList.remove('visible');
     }
   }
 
   if (tp) tp.textContent = total !== null ? total.toLocaleString() + ' دج' : '—';
 }
 
+// ══════════════════════════════════════════
 function finalSubmit() {
   const name      = document.getElementById('cust_name').value.trim();
   const phone     = document.getElementById('phoneInput').value.trim();
@@ -137,48 +191,39 @@ function finalSubmit() {
   btn.innerText     = '⏳ جاري إرسال الطلب...';
   btn.style.opacity = '0.6';
 
-  // ✅ FIX PRINCIPAL : FormData بدل JSON
-  // مع mode: 'no-cors'، المتصفح يرفض Content-Type: application/json
-  // FormData (multipart) هي الطريقة الوحيدة اللي تخدم
-  const formData = new FormData();
-  formData.append('product',        PRODUCT_NAME);
-  formData.append('name',           name);
-  formData.append('phone',          phone);
-  formData.append('wilaya_num',     wilayaNum);
-  formData.append('wilaya_name',    wilayaName);
-  formData.append('commune',        commune);
-  formData.append('delivery_type',  selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب');
-  formData.append('delivery_price', String(delivery));  // ✅ رقم صافي بلا "دج"
-  formData.append('total',          String(total));      // ✅ رقم صافي بلا "دج"
+  const payload = JSON.stringify({
+    product:        PRODUCT_NAME,
+    name:           name,
+    phone:          phone,
+    wilaya_num:     wilayaNum,
+    wilaya_name:    wilayaName,
+    commune:        commune,
+    delivery_type:  selectedDelivery === 'home' ? 'توصيل للمنزل' : 'توصيل للمكتب',
+    delivery_price: String(delivery),
+    total:          String(total)
+  });
 
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    mode:   'no-cors',  // مبدّلش هذا — Apps Script يحتاجه
-    body:   formData    // ✅ FormData بدل JSON.stringify
-  })
-  .then(() => {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', SCRIPT_URL, true);
+  xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+
+  const onSuccess = () => {
     if (typeof fbq !== 'undefined') {
-      fbq('track', 'Purchase', {
-        value:        total,
-        currency:     'DZD',
-        content_name: PRODUCT_NAME
-      });
+      fbq('track', 'Purchase', { value: total, currency: 'DZD', content_name: PRODUCT_NAME });
     }
-
     const modal = document.getElementById('successModal');
     if (modal) { modal.classList.add('show'); modal.style.display = 'flex'; }
     btn.disabled      = false;
-    btn.innerText     = 'تأكيد الطلب';
+    btn.innerText     = 'تأكيد الطلب 🛒';
     btn.style.opacity = '1';
-  })
-  .catch(() => {
-    alert('حدث خطأ، حاول مرة أخرى');
-    btn.disabled      = false;
-    btn.innerText     = 'تأكيد الطلب';
-    btn.style.opacity = '1';
-  });
+  };
+
+  xhr.onload  = onSuccess;
+  xhr.onerror = onSuccess;
+  xhr.send(payload);
 }
 
+// ══════════════════════════════════════════
 function closeSuccessModal() {
   const modal = document.getElementById('successModal');
   if (modal) { modal.classList.remove('show'); modal.style.display = 'none'; }
@@ -187,7 +232,9 @@ function closeSuccessModal() {
   setTimeout(() => location.reload(), 1000);
 }
 
+// ══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  loadCommunes('home');
   updateTotal();
 
   const ph = document.getElementById('phoneInput');
